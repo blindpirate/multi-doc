@@ -8,22 +8,31 @@ buildscript {
 
 apply plugin: 'nebula-aggregate-javadocs'
 
-allprojects{
-    apply plugin:'java'
-    configurations {
-    	taglet
+configurations { taglet }
+dependencies { taglet files("$rootDir/taglet.jar") }
+
+tasks.whenTaskAdded { task ->
+    if('aggregateJavadocs' != task.name) {
+        return
     }
+    aggregateJavadocs {
+        options {
+            taglets 'foo.ToDoTaglet'
+            def path = configurations.taglet.files
+            subprojects.findAll { subproject -> subproject.plugins.hasPlugin(JavaPlugin) }.each {path = path + it.sourceSets.main.output}
+            tagletPath (path as File [])
+        }
+    }
+}
+
+subprojects{
+    apply plugin:'java'
+    configurations { taglet }
     dependencies { taglet files("$rootDir/taglet.jar") }
     tasks.withType(Javadoc) {
         options {
             taglets 'foo.ToDoTaglet'
-            if(rootProject.hasProperty('setPathNow')) {
-                tagletPath ((configurations.taglet.files + sourceSets.main.output) as File[])
-            } else {
-                afterEvaluate {
-                    tagletPath ((configurations.taglet.files + sourceSets.main.output) as File[])
-                }
-            }
+            tagletPath ((configurations.taglet.files + sourceSets.main.output) as File[])
         }
     }
 }
